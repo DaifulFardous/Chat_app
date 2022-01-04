@@ -1,16 +1,19 @@
-//external imports
+// external imports
 const { check, validationResult } = require("express-validator");
 const createError = require("http-errors");
 const path = require("path");
 const { unlink } = require("fs");
 
-//add user
-const addUsersValidators = [
+// internal imports
+const User = require("../../models/People");
+
+// add user
+const addUserValidators = [
   check("name")
     .isLength({ min: 1 })
     .withMessage("Name is required")
     .isAlpha("en-US", { ignore: " -" })
-    .withMessage("Name must not contain anything other than Alphabet")
+    .withMessage("Name must not contain anything other than alphabet")
     .trim(),
   check("email")
     .isEmail()
@@ -20,7 +23,7 @@ const addUsersValidators = [
       try {
         const user = await User.findOne({ email: value });
         if (user) {
-          throw createError("Email is already use!");
+          throw createError("Email already is use!");
         }
       } catch (err) {
         throw createError(err.message);
@@ -30,12 +33,12 @@ const addUsersValidators = [
     .isMobilePhone("bn-BD", {
       strictMode: true,
     })
-    .withMessage("Mobile Number Must be valid Bangladeshi Mobile Number")
+    .withMessage("Mobile number must be a valid Bangladeshi mobile number")
     .custom(async (value) => {
       try {
         const user = await User.findOne({ mobile: value });
         if (user) {
-          throw createError("Mobile number already use!");
+          throw createError("Mobile already is use!");
         }
       } catch (err) {
         throw createError(err.message);
@@ -44,38 +47,28 @@ const addUsersValidators = [
   check("password")
     .isStrongPassword()
     .withMessage(
-      "Password must have 8 characters & should contain at least 1 uppercase, 1 lowercase and 1 symbol"
+      "Password must be at least 8 characters long & should contain at least 1 lowercase, 1 uppercase, 1 number & 1 symbol"
     ),
 ];
 
-const addUsersValidatorHandler = function (req, res, next) {
+const addUserValidationHandler = function (req, res, next) {
   const errors = validationResult(req);
   const mappedErrors = errors.mapped();
-  /*
-    mappederrors = {
-        name: {
-            msg: "Name is required"
-        },
-        email: {
-            msg: "Invalid email"
-        }
-    };
-   */
   if (Object.keys(mappedErrors).length === 0) {
     next();
   } else {
-    //remove upload files
+    // remove uploaded files
     if (req.files.length > 0) {
-      const { fileName } = req.files[0];
+      const { filename } = req.files[0];
       unlink(
-        path.join(__dirname, `../../../public/uploads/avatars/${fileName}`),
+        path.join(__dirname, `/../public/uploads/avatars/${filename}`),
         (err) => {
           if (err) console.log(err);
         }
       );
     }
 
-    //response errors
+    // response the errors
     res.status(500).json({
       errors: mappedErrors,
     });
@@ -83,6 +76,6 @@ const addUsersValidatorHandler = function (req, res, next) {
 };
 
 module.exports = {
-  addUsersValidators,
-  addUsersValidatorHandler,
+  addUserValidators,
+  addUserValidationHandler,
 };
